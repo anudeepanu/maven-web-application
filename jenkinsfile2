@@ -1,0 +1,28 @@
+node
+{
+  def mavenHome = tool name: "maven3.8.2"
+  properties([buildDiscarder(logRotator(artifactDaysToKeepStr: '', artifactNumToKeepStr: '5', daysToKeepStr: '5', numToKeepStr: '')), pipelineTriggers([cron('1 * * * * ')])])
+	stage ('checkout the code or cloing the code')
+	{
+	git credentialsId: 'github-cereditnals', url: 'https://github.com/anudeepanu/maven-web-application.git'
+    }
+     stage ('build using maven')
+	{
+	sh "${mavenHome}/bin/mvn clean package"
+    }
+     stage ('sonar scanning')
+    {
+	sh "${mavenHome}/bin/mvn sonar:sonar"
+	}
+	stage ('storing in nexus artifact repo')
+	{
+	sh "${mavenHome}/bin/mvn deploy"
+	}
+	stage ('deploying to tomcat server')
+	{
+	sshagent(['tomcat-ssh-servert-copy-artifact-to-webapps-directory']) 
+	{
+	sh "scp -o StrictHostKeyChecking=no target/maven-web-application.war ubuntu@3.140.187.225:/opt/tomcat/webapps/"
+	}
+	}
+ }	
